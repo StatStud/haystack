@@ -215,7 +215,7 @@ class FAISSDocumentStore(SQLDocumentStore):
         batched_documents = get_batches_from_generator(result, batch_size)
         
         embeddings = np.array(processed_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,768)
-        embeddings_to_index = np.array_split(embeddings_to_index, round(document_count/batch_size))
+        embeddings_to_index = np.array_split(embeddings, round(document_count/batch_size))
         
         with tqdm(total=document_count, disable=self.progress_bar) as progress_bar:
             for document_batch in batched_documents:
@@ -234,6 +234,8 @@ class FAISSDocumentStore(SQLDocumentStore):
                 self.update_vector_ids(vector_id_map, index=index)
                 progress_bar.update(batch_size)
         progress_bar.close()
+        print("value of j:",j)
+        print("number of batches:",round(document_count/batch_size))
 
     def get_all_documents(
         self,
