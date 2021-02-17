@@ -166,13 +166,18 @@ class FAISSDocumentStore(SQLDocumentStore):
             self.index: self.embedding_field,
         }
 
+
     def update_embeddings(
         self,
         retriever: BaseRetriever,
         index: Optional[str] = None,
         update_existing_embeddings: bool = True,
         filters: Optional[Dict[str, List[str]]] = None,
-        batch_size: int = 10_000
+        batch_size: int = 10_000,
+        embedding_col: str = 'pure_bert_sentence_embeddings',
+        row_count: int = 9553,
+        j: int = 0,
+        spark_df
     ):
         """
         Updates the embeddings in the the document store using the encoding model specified in the retriever.
@@ -210,13 +215,19 @@ class FAISSDocumentStore(SQLDocumentStore):
             only_documents_without_embedding=not update_existing_embeddings
         )
         batched_documents = get_batches_from_generator(result, batch_size)
+        
+        embeddings = np.array(spark_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,768)
+        embeddings_to_index = np.array_split(embeddings, round(document_count/batch_size))
+        
         with tqdm(total=document_count, disable=self.progress_bar) as progress_bar:
             for document_batch in batched_documents:
-                embeddings = retriever.embed_passages(document_batch)  # type: ignore
-                assert len(document_batch) == len(embeddings)
+                
+                #embeddings = retriever.embed_passages(document_batch)  # type: ignore
+                #assert len(document_batch) == len(embeddings)
+                #embeddings_to_index = np.array(embeddings, dtype="float32")
 
-                embeddings_to_index = np.array(embeddings, dtype="float32")
-                self.faiss_indexes[index].add(embeddings_to_index)
+                self.faiss_indexes[index].add(embeddings_to_index[j])
+                j += 1
 
                 vector_id_map = {}
                 for doc in document_batch:
@@ -225,6 +236,8 @@ class FAISSDocumentStore(SQLDocumentStore):
                 self.update_vector_ids(vector_id_map, index=index)
                 progress_bar.update(batch_size)
         progress_bar.close()
+        print("value of j:",j)
+        print("number of batches:",round(document_count/batch_size))
 
     def get_all_documents(
         self,
