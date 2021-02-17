@@ -38,7 +38,7 @@ class FAISSDocumentStore(SQLDocumentStore):
         index: str = "document",
         similarity: str = "dot_product",
         embedding_field: str = "embedding",
-        progress_bar: bool = True
+        progress_bar: bool = True,
         **kwargs,
     ):
         """
