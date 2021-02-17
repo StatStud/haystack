@@ -177,7 +177,7 @@ class FAISSDocumentStore(SQLDocumentStore):
         embedding_col: str = 'pure_bert_sentence_embeddings',
         row_count: int = 9553,
         j: int = 0,
-        spark_df
+        spark_df = None
     ):
         """
         Updates the embeddings in the the document store using the encoding model specified in the retriever.
