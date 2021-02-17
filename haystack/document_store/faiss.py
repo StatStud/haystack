@@ -203,6 +203,11 @@ class FAISSDocumentStore(SQLDocumentStore):
         if document_count == 0:
             logger.warning("Calling DocumentStore.update_embeddings() on an empty index")
             return
+        
+        if embedding_col == "pure_bert_sentence_embeddings":
+            d = 768
+        elif embedding_col == "pure_sentence_embeddings":
+            d = 512
 
         logger.info(f"Updating embeddings for {document_count} docs...")
         vector_id = self.faiss_indexes[index].ntotal
@@ -216,7 +221,7 @@ class FAISSDocumentStore(SQLDocumentStore):
         )
         batched_documents = get_batches_from_generator(result, batch_size)
         
-        embeddings = np.array(spark_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,768)
+        embeddings = np.array(spark_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,d)
         embeddings_to_index = np.array_split(embeddings, round(document_count/batch_size))
         
         with tqdm(total=document_count, disable=self.progress_bar) as progress_bar:
