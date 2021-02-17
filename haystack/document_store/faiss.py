@@ -177,7 +177,7 @@ class FAISSDocumentStore(SQLDocumentStore):
         embedding_col: str = 'pure_bert_sentence_embeddings',
         row_count: int = 9553,
         j: int = 0,
-        d: int = 768,
+        dim_of_embedding: int = 768,
         spark_df = None
     ):
         """
@@ -217,7 +217,7 @@ class FAISSDocumentStore(SQLDocumentStore):
         )
         batched_documents = get_batches_from_generator(result, batch_size)
         
-        embeddings = np.array(spark_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,d)
+        embeddings = np.array(spark_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,dim_of_embedding)
         embeddings_to_index = np.array_split(embeddings, round(document_count/batch_size))
         
         with tqdm(total=document_count, disable=self.progress_bar) as progress_bar:
