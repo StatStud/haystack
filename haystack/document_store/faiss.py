@@ -38,7 +38,7 @@ class FAISSDocumentStore(SQLDocumentStore):
         index: str = "document",
         similarity: str = "dot_product",
         embedding_field: str = "embedding",
-        progress_bar: bool = True,
+        progress_bar: bool = True
         **kwargs,
     ):
         """
@@ -173,10 +173,10 @@ class FAISSDocumentStore(SQLDocumentStore):
         update_existing_embeddings: bool = True,
         filters: Optional[Dict[str, List[str]]] = None,
         batch_size: int = 10_000,
-        embedding_col = 'pure_bert_sentence_embeddings',
-        row_count = 9553,
-        j = 0,
-        spark_df = processed_df
+        embedding_col: str = 'pure_bert_sentence_embeddings',
+        row_count: int = 9553,
+        j: int = 0,
+        spark_df
     ):
         """
         Updates the embeddings in the the document store using the encoding model specified in the retriever.
