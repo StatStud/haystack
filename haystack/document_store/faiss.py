@@ -239,6 +239,8 @@ class FAISSDocumentStore(SQLDocumentStore):
         progress_bar.close()
         print("value of j:",j)
         print("number of batches:",round(document_count/batch_size))
+        
+        return embeddings_to_index ## do not forget to comment me out!!!
 
     def get_all_documents(
         self,
