@@ -217,15 +217,15 @@ class FAISSDocumentStore(SQLDocumentStore):
         )
         batched_documents = get_batches_from_generator(result, batch_size)
         
-        embeddings = np.array(spark_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,dim_of_embedding)
-        embeddings_to_index = np.array_split(embeddings, round(document_count/batch_size))
+        #embeddings = np.array(spark_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,dim_of_embedding)
+        #embeddings_to_index = np.array_split(embeddings, round(document_count/batch_size))
         
         with tqdm(total=document_count, disable=self.progress_bar) as progress_bar:
             for document_batch in batched_documents:
                 
-                #embeddings = retriever.embed_passages(document_batch)  # type: ignore
-                #assert len(document_batch) == len(embeddings)
-                #embeddings_to_index = np.array(embeddings, dtype="float32")
+                embeddings = retriever.embed_passages(document_batch)  # type: ignore
+                assert len(document_batch) == len(embeddings)
+                embeddings_to_index = np.array(embeddings, dtype="float32")
 
                 self.faiss_indexes[index].add(embeddings_to_index[j])
                 j += 1
