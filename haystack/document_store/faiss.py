@@ -18,13 +18,10 @@ logger = logging.getLogger(__name__)
 class FAISSDocumentStore(SQLDocumentStore):
     """
     Document store for very large scale embedding based dense retrievers like the DPR.
-
     It implements the FAISS library(https://github.com/facebookresearch/faiss)
     to perform similarity search on vectors.
-
     The document text and meta-data (for filtering) are stored using the SQLDocumentStore, while
     the vector embeddings are indexed in a FAISS Index.
-
     """
 
     def __init__(
@@ -120,7 +117,6 @@ class FAISSDocumentStore(SQLDocumentStore):
     ):
         """
         Add new documents to the DocumentStore.
-
         :param documents: List of `Dicts` or List of `Documents`. If they already contain the embeddings, we'll index
                           them right away in FAISS. If not, you can later call update_embeddings() to create & index them.
         :param index: (SQL) index name for storing the docs and metadata
@@ -166,24 +162,17 @@ class FAISSDocumentStore(SQLDocumentStore):
             self.index: self.embedding_field,
         }
 
-
     def update_embeddings(
         self,
         retriever: BaseRetriever,
         index: Optional[str] = None,
         update_existing_embeddings: bool = True,
         filters: Optional[Dict[str, List[str]]] = None,
-        batch_size: int = 10_000,
-        embedding_col: str = 'pure_bert_sentence_embeddings',
-        row_count: int = 9553,
-        j: int = 0,
-        dim_of_embedding: int = 768,
-        spark_df = None
+        batch_size: int = 10_000
     ):
         """
         Updates the embeddings in the the document store using the encoding model specified in the retriever.
         This can be useful if want to add or change the embeddings for your documents (e.g. after changing the retriever config).
-
         :param retriever: Retriever to use to get embeddings for text
         :param index: Index name for which embeddings are to be updated. If set to None, the default self.index is used.
         :param update_existing_embeddings: Whether to update existing embeddings of the documents. If set to False,
@@ -216,19 +205,13 @@ class FAISSDocumentStore(SQLDocumentStore):
             only_documents_without_embedding=not update_existing_embeddings
         )
         batched_documents = get_batches_from_generator(result, batch_size)
-        
-        embeddings = np.array(spark_df.select(embedding_col).collect(), dtype="float32").reshape(row_count,dim_of_embedding)
-        embeddings_to_index = np.array_split(embeddings, round(document_count/batch_size))
-        
         with tqdm(total=document_count, disable=self.progress_bar) as progress_bar:
             for document_batch in batched_documents:
-                
-                #embeddings = retriever.embed_passages(document_batch)  # type: ignore
-                #assert len(document_batch) == len(embeddings)
-                #embeddings_to_index = np.array(embeddings, dtype="float32")
+                embeddings = retriever.embed_passages(document_batch)  # type: ignore
+                assert len(document_batch) == len(embeddings)
 
-                self.faiss_indexes[index].add(embeddings_to_index[j])
-                j += 1
+                embeddings_to_index = np.array(embeddings, dtype="float32")
+                self.faiss_indexes[index].add(embeddings_to_index)
 
                 vector_id_map = {}
                 for doc in document_batch:
@@ -237,8 +220,6 @@ class FAISSDocumentStore(SQLDocumentStore):
                 self.update_vector_ids(vector_id_map, index=index)
                 progress_bar.update(batch_size)
         progress_bar.close()
-        print("value of j:",j)
-        print("number of batches:",round(document_count/batch_size))
 
     def get_all_documents(
         self,
@@ -264,7 +245,6 @@ class FAISSDocumentStore(SQLDocumentStore):
         Get all documents from the document store. Under-the-hood, documents are fetched in batches from the
         document store and yielded as individual documents. This method can be used to iteratively process
         a large number of documents without having to load all documents in memory.
-
         :param index: Name of the index to get the documents from. If None, the
                       DocumentStore's default index (self.index) will be used.
         :param filters: Optional filters to narrow down the documents to return.
@@ -306,7 +286,6 @@ class FAISSDocumentStore(SQLDocumentStore):
         Some FAISS indices (e.g. IVF) require initial "training" on a sample of vectors before you can add your final vectors.
         The train vectors should come from the same distribution as your final ones.
         You can pass either documents (incl. embeddings) or just the plain embeddings that the index shall be trained on.
-
         :param documents: Documents (incl. the embeddings)
         :param embeddings: Plain embeddings
         :param index: Name of the index to train. If None, the DocumentStore's default index (self.index) will be used.
@@ -345,7 +324,6 @@ class FAISSDocumentStore(SQLDocumentStore):
     ) -> List[Document]:
         """
         Find the document that is most similar to the provided `query_emb` by using a vector similarity metric.
-
         :param query_emb: Embedding of the query (e.g. gathered from DPR)
         :param filters: Optional filters to narrow down the search space.
                         Example: {"name": ["some", "more"], "category": ["only_one"]}
@@ -383,7 +361,6 @@ class FAISSDocumentStore(SQLDocumentStore):
     def save(self, file_path: Union[str, Path]):
         """
         Save FAISS Index to the specified file.
-
         :param file_path: Path to save to.
         :return: None
         """
@@ -400,7 +377,6 @@ class FAISSDocumentStore(SQLDocumentStore):
         Load a saved FAISS index from a file and connect to the SQL database.
         Note: In order to have a correct mapping from FAISS to SQL,
               make sure to use the same SQL DB that you used when calling `save()`.
-
         :param faiss_file_path: Stored FAISS index file. Can be created via calling `save()`
         :param sql_url: Connection string to the SQL database that contains your docs and metadata.
         :param index: Index name to load the FAISS index as. It must match the index name used for
