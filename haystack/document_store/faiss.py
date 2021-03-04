@@ -168,6 +168,7 @@ class FAISSDocumentStore(SQLDocumentStore):
         index: Optional[str] = None,
         update_existing_embeddings: bool = True,
         filters: Optional[Dict[str, List[str]]] = None,
+        embeddings_to_index = None,
         batch_size: int = 10_000
     ):
         """
