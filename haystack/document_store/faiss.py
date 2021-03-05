@@ -168,7 +168,6 @@ class FAISSDocumentStore(SQLDocumentStore):
         index: Optional[str] = None,
         update_existing_embeddings: bool = True,
         filters: Optional[Dict[str, List[str]]] = None,
-        embeddings_to_index = None,
         batch_size: int = 10_000
     ):
         """
@@ -206,17 +205,27 @@ class FAISSDocumentStore(SQLDocumentStore):
             only_documents_without_embedding=not update_existing_embeddings
         )
         
-        self.faiss_indexes[index].add(embeddings_to_index)
-
-        batched_documents = get_batches_from_generator(result, batch_size)
+        arrays = []
         
-        for document_batch in batched_documents:
-            
-            vector_id_map = {}
-            for doc in document_batch:
-                vector_id_map[doc.id] = vector_id
-                vector_id += 1
-            self.update_vector_ids(vector_id_map, index=index)
+        batched_documents = get_batches_from_generator(result, batch_size)
+        with tqdm(total=document_count, disable=not self.progress_bar) as progress_bar:
+            for document_batch in batched_documents:
+                embeddings = retriever.embed_passages(document_batch)  # type: ignore
+                assert len(document_batch) == len(embeddings)
+
+                embeddings_to_index = np.array(embeddings, dtype="float32")
+                self.faiss_indexes[index].add(embeddings_to_index)
+                arrays.append(embeddings_to_index)
+
+                vector_id_map = {}
+                for doc in document_batch:
+                    vector_id_map[doc.id] = vector_id
+                    vector_id += 1
+                self.update_vector_ids(vector_id_map, index=index)
+                progress_bar.update(batch_size)
+        progress_bar.close()
+        
+        return arrays
 
     def get_all_documents(
         self,
